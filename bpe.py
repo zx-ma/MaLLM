@@ -27,7 +27,7 @@ def my_merge(arr, pair, new_id):
 def train(text: str, vocab_size):
     merged_dict = {}
     arr = list(text.encode("utf-8"))
-    vocab = {idx: bytes([idx]) for idx in range(256)}
+    # vocab = {idx: bytes([idx]) for idx in range(256)}
     # print(f"{vocab=} \n")
 
     for i in range(vocab_size - 256):
@@ -37,12 +37,35 @@ def train(text: str, vocab_size):
 
         pair = count_dic.most_common(1)[0][0]
         merged_dict[pair] = 256 + i
-        vocab[256 + i] = vocab[pair[0]] + vocab[pair[1]]
+        # vocab[256 + i] = vocab[pair[0]] + vocab[pair[1]]
 
-        print(vocab[256 + i])
+        # print(vocab[256 + i])
         arr = my_merge(arr, pair, 256 + i)
 
     return merged_dict
+
+
+def build_vocab(merged_dict):
+    vocab = {idx: bytes([idx]) for idx in range(256)}
+    for pair, val in merged_dict.items():
+        vocab[val] = vocab[pair[0]] + vocab[pair[1]]
+
+    return vocab
+
+
+def encode(text, merged_dic):
+    arr = list(text.encode("utf-8"))
+    for pair, val in merged_dic.items():
+        arr = my_merge(arr, pair, val)
+
+    return arr
+
+
+def decode(arr, vocab):
+    byte_arr = [vocab[index] for index in arr]
+    text = b"".join(byte_arr).decode("utf-8")
+
+    return text
 
 
 if __name__ == "__main__":
@@ -52,6 +75,12 @@ if __name__ == "__main__":
 
     with Path("data", "TinyStoriesV2-GPT4-valid.txt").open(encoding="utf-8") as f:
         text = f.read(100000)
-        print(train(text, 500))
+        merged_dic = train(text, 500)
+        vocab = build_vocab(merged_dic)
+        # print(vocab)
+        encoded = encode(text, merged_dic)
+        # print(encoded)
+        decoded = decode(encoded, vocab)
+        print(decoded)
 
-    print(train("hi", 300))
+    # print(train("hi", 300))
