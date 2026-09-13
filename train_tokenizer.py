@@ -1,17 +1,19 @@
 from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 
-data_path = "data/TinyStoriesV2-GPT4-train.txt"
+from config import SPECIALS, TOKENIZER_PATH, TRAIN_TXT, VOCAB_SIZE
+
 tok = Tokenizer(models.BPE())
 tok.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
 tok.decoder = decoders.ByteLevel()
-# print(tok.get_vocab_size())
+
 bpe_trainer = trainers.BpeTrainer(
-    vocab_size=8192,
-    special_tokens=["<|endoftext|>", "<|user|>", "<|assistant|>", "<|pad|>"],
+    vocab_size=VOCAB_SIZE,
+    special_tokens=SPECIALS,
     initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
     show_progress=True,
 )
 
+tok.train([TRAIN_TXT], bpe_trainer)
+print("vocab_size", tok.get_vocab_size())
 
-tok.train([data_path], bpe_trainer)
-tok.save("tokenizer-8k.json")
+tok.save(TOKENIZER_PATH)
