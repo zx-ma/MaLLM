@@ -5,8 +5,6 @@ from tokenizers import Tokenizer
 
 from config import TOKENIZER_PATH, TRAIN_BIN, TRAIN_TXT, VAL_BIN, VALID_TXT
 
-Path(TRAIN_BIN).parent.mkdir(parents=True, exist_ok=True)
-
 
 def batch2file(storys, tok, out_f):
     encs = tok.encode_batch(storys)
@@ -19,26 +17,33 @@ def batch2file(storys, tok, out_f):
     return len(arr)
 
 
-tok = Tokenizer.from_file(TOKENIZER_PATH)
-lines = []
-storys = []
-n_docs = 0
-total = 0
+def encode_file(tokenizer_path, text_path, bin_path):
+    Path(bin_path).parent.mkdir(parents=True, exist_ok=True)
 
-with open(VALID_TXT, encoding="utf-8") as f, open(VAL_BIN, mode="wb") as wf:
-    for line in f:
-        lines.append(line)
-        if line.strip() == "<|endoftext|>":
-            storys.append("".join(lines))
-            lines = []
-            if len(storys) >= 1000:
-                token_num = batch2file(storys, tok, wf)
-                total += token_num
-                storys = []
-            n_docs += 1
+    tok = Tokenizer.from_file(tokenizer_path)
+    lines = []
+    stories = []
+    n_docs = 0
+    total = 0
 
-    if storys:
-        total += batch2file(storys, tok, wf)
+    with open(text_path, encoding="utf-8") as f, open(bin_path, mode="wb") as wf:
+        for line in f:
+            lines.append(line)
+            if line.strip() == "<|endoftext|>":
+                stories.append("".join(lines))
+                lines = []
+                if len(stories) >= 1000:
+                    token_num = batch2file(stories, tok, wf)
+                    total += token_num
+                    stories = []
+                n_docs += 1
 
-print(f"{n_docs=}")
-print(f"{total=}")
+        if stories:
+            total += batch2file(stories, tok, wf)
+
+    return n_docs, total
+
+
+if __name__ == "__main__":
+    n_docs, total = encode_file(TOKENIZER_PATH, TRAIN_TXT, TRAIN_BIN)
+    print(f"n_docs:{n_docs}, total: {total}")
