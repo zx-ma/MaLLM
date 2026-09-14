@@ -50,3 +50,25 @@ class Attention(nn.Module):
         out = out.transpose(1, 2).reshape(B, T, -1)
 
         return self.fc(out)
+
+
+class Block(nn.Module):
+    def __init__(self, d, n_head):
+        super().__init__()
+        self.attn = Attention(d, n_head)
+        self.ln1 = nn.LayerNorm(d)
+        self.mlp = MLP(d)
+        self.ln2 = nn.LayerNorm(d)
+
+    def forward(self, x):
+        x = x + self.attn(self.ln1(x))
+        x = x + self.mlp(self.ln2(x))
+        return x
+
+
+class Mallm(nn.module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
