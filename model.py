@@ -66,9 +66,30 @@ class Block(nn.Module):
         return x
 
 
-class Mallm(nn.module):
-    def __init__(self):
+class Mallm(nn.Module):
+    def __init__(self, vocab_size, block_size, d, n_head, n_layer):
         super().__init__()
+        self.tok_emb = nn.Embedding(vocab_size, d)
+        self.pos_emb = nn.Embedding(block_size, d)
 
-    def forward(self, x):
-        return x
+        self.blocks = nn.ModuleList([Block(d, n_head) for _ in range(n_layer)])
+
+        self.ln_final = nn.LayerNorm(d)
+
+        self.language_model_head = nn.Linear(d, vocab_size, bias=False)
+
+        self.tok_emb.weight = self.language_model_head.weight
+
+    def forward(self, index):
+        B, T = index.size()
+        tok = self.tok_emb(index)
+
+        positions = torch.arange(T, device=index.device)
+        pos = self.pos_emb(positions)
+        x = tok + pos
+
+        for block in self.blocks:
+            x = block(x)
+
+        x = self.ln_final(x)
+        return self.language_model_head(x)
