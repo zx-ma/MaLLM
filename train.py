@@ -1,9 +1,20 @@
+from dataclasses import asdict
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from config import TOKENIZER_PATH, TRAIN_BIN, TRAIN_TXT, VAL_BIN, VALID_TXT, VOCAB_SIZE
+from config import (
+    CKPT_PATH,
+    TOKENIZER_PATH,
+    TRAIN_BIN,
+    TRAIN_TXT,
+    VAL_BIN,
+    VALID_TXT,
+    VOCAB_SIZE,
+)
 from model import Mallm, MallmConfig
 
 
@@ -44,6 +55,7 @@ if __name__ == "__main__":
 
     batch_size = 32
     device = "cuda"
+    Path(CKPT_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     mallm = Mallm(cfg).to(device)
 
@@ -74,3 +86,9 @@ if __name__ == "__main__":
                 device=device,
             )
             print(f"step: {step}, loss: {loss_train}, valid loss: {loss_val}")
+
+            checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
+            torch.save(checkpoint, CKPT_PATH)
+
+    checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
+    torch.save(checkpoint, CKPT_PATH)
