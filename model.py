@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MLP(nn.Module):
@@ -69,6 +70,7 @@ class Block(nn.Module):
 class Mallm(nn.Module):
     def __init__(self, vocab_size, block_size, d, n_head, n_layer):
         super().__init__()
+        self.vocab_size = vocab_size
         self.tok_emb = nn.Embedding(vocab_size, d)
         self.pos_emb = nn.Embedding(block_size, d)
 
@@ -80,7 +82,7 @@ class Mallm(nn.Module):
 
         self.tok_emb.weight = self.language_model_head.weight
 
-    def forward(self, index):
+    def forward(self, index, target=None):
         B, T = index.size()
         tok = self.tok_emb(index)
 
@@ -92,4 +94,12 @@ class Mallm(nn.Module):
             x = block(x)
 
         x = self.ln_final(x)
-        return self.language_model_head(x)
+
+        logits = self.language_model_head(x)
+        loss = None
+        if target is not None:
+            loss = F.cross_entropy(
+                logits.reshape(-1, self.vocab_size), target.reshape(-1)
+            )
+
+        return logits, loss

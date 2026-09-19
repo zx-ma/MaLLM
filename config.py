@@ -7,3 +7,5 @@ TOKENIZER_PATH = f"tokenizer-{VOCAB_SIZE // 1024}k.json"
 
 TRAIN_BIN = "data/processed/train.bin"
 VAL_BIN = "data/processed/val.bin"
+
+CKPT_PATH = "checkpoints/mallm.pt"
