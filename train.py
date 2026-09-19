@@ -23,11 +23,25 @@ def get_batch(data, B, T, device):
     return x.to(device), y.to(device)
 
 
+@torch.no_grad()
+def evaluate_loss(data, model, loop_time, batch_size, block_size, device):
+    model.eval()
+    losses = []
+    for _ in range(loop_time):
+        x, y = get_batch(data, B=batch_size, T=block_size, device=device)
+        _, loss = model(x, y)
+        losses.append(loss.item())
+
+    model.train()
+    return sum(losses) / len(losses)
+
+
 if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
     block_size = 256
+    batch_size = 32
     device = "cuda"
 
     mallm = Mallm(
@@ -38,20 +52,26 @@ if __name__ == "__main__":
     for step in range(1000):
         optimizer.zero_grad()
 
-        x, y = get_batch(data, B=32, T=block_size, device=device)
+        x, y = get_batch(data, B=batch_size, T=block_size, device=device)
         logits, loss = mallm(x, y)
         loss.backward()
         optimizer.step()
 
         if step % 100 == 0:
-            with torch.no_grad():
-                valid_losses = []
-                for _ in range(20):
-                    x_val, y_val = get_batch(
-                        data_val, B=32, T=block_size, device=device
-                    )
-                    _, loss_val = mallm(x_val, y_val)
-                    valid_losses.append(loss_val.item())
-            print(
-                f"step: {step}, loss: {loss.item()}, valid loss: {sum(valid_losses) / len(valid_losses)}"
+            loss_train = evaluate_loss(
+                data,
+                mallm,
+                20,
+                batch_size=batch_size,
+                block_size=block_size,
+                device=device,
             )
+            loss_val = evaluate_loss(
+                data_val,
+                mallm,
+                20,
+                batch_size=batch_size,
+                block_size=block_size,
+                device=device,
+            )
+            print(f"step: {step}, loss: {loss_train}, valid loss: {loss_val}")
