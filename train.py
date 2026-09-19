@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from config import TOKENIZER_PATH, TRAIN_BIN, TRAIN_TXT, VAL_BIN, VALID_TXT, VOCAB_SIZE
-from model import Mallm
+from model import Mallm, MallmConfig
 
 
 def get_batch(data, B, T, device):
@@ -40,19 +40,18 @@ if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
-    block_size = 256
+    cfg = MallmConfig(vocab_size=VOCAB_SIZE)
+
     batch_size = 32
     device = "cuda"
 
-    mallm = Mallm(
-        vocab_size=VOCAB_SIZE, block_size=block_size, d=384, n_head=6, n_layer=6
-    ).to(device)
+    mallm = Mallm(cfg).to(device)
 
     optimizer = torch.optim.AdamW(mallm.parameters(), lr=3e-4)
     for step in range(1000):
         optimizer.zero_grad()
 
-        x, y = get_batch(data, B=batch_size, T=block_size, device=device)
+        x, y = get_batch(data, B=batch_size, T=cfg.block_size, device=device)
         logits, loss = mallm(x, y)
         loss.backward()
         optimizer.step()
@@ -63,7 +62,7 @@ if __name__ == "__main__":
                 mallm,
                 20,
                 batch_size=batch_size,
-                block_size=block_size,
+                block_size=cfg.block_size,
                 device=device,
             )
             loss_val = evaluate_loss(
@@ -71,7 +70,7 @@ if __name__ == "__main__":
                 mallm,
                 20,
                 batch_size=batch_size,
-                block_size=block_size,
+                block_size=cfg.block_size,
                 device=device,
             )
             print(f"step: {step}, loss: {loss_train}, valid loss: {loss_val}")

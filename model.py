@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -67,18 +69,30 @@ class Block(nn.Module):
         return x
 
 
+@dataclass
+class MallmConfig:
+    vocab_size: int
+    d: int = 384
+    block_size: int = 256
+    n_head: int = 6
+    n_layer: int = 6
+
+
 class Mallm(nn.Module):
-    def __init__(self, vocab_size, block_size, d, n_head, n_layer):
+    def __init__(self, config):
         super().__init__()
-        self.vocab_size = vocab_size
-        self.tok_emb = nn.Embedding(vocab_size, d)
-        self.pos_emb = nn.Embedding(block_size, d)
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.tok_emb = nn.Embedding(config.vocab_size, config.d)
+        self.pos_emb = nn.Embedding(config.block_size, config.d)
 
-        self.blocks = nn.ModuleList([Block(d, n_head) for _ in range(n_layer)])
+        self.blocks = nn.ModuleList(
+            [Block(config.d, config.n_head) for _ in range(config.n_layer)]
+        )
 
-        self.ln_final = nn.LayerNorm(d)
+        self.ln_final = nn.LayerNorm(config.d)
 
-        self.language_model_head = nn.Linear(d, vocab_size, bias=False)
+        self.language_model_head = nn.Linear(config.d, config.vocab_size, bias=False)
 
         self.tok_emb.weight = self.language_model_head.weight
 
