@@ -25,6 +25,7 @@ def get_batch(data, B, T, device):
 
 if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
+    data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
     block_size = 256
     device = "cuda"
@@ -43,4 +44,14 @@ if __name__ == "__main__":
         optimizer.step()
 
         if step % 100 == 0:
-            print(f"step: {step}, loss: {loss.item()}")
+            with torch.no_grad():
+                valid_losses = []
+                for _ in range(20):
+                    x_val, y_val = get_batch(
+                        data_val, B=32, T=block_size, device=device
+                    )
+                    _, loss_val = mallm(x_val, y_val)
+                    valid_losses.append(loss_val.item())
+            print(
+                f"step: {step}, loss: {loss.item()}, valid loss: {sum(valid_losses) / len(valid_losses)}"
+            )
