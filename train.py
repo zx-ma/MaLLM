@@ -1,3 +1,4 @@
+import math
 from dataclasses import asdict
 from pathlib import Path
 
@@ -53,6 +54,17 @@ def save_ckpt(mallm, ckpt_path):
     torch.save(checkpoint, ckpt_path)
 
 
+def get_lr(step, max_lr, min_lr, warm_up_steps, max_step):
+    if step < warm_up_steps:
+        return (step / warm_up_steps) * max_lr
+    elif step >= max_step:
+        return min_lr
+
+    progress_percent = (step - warm_up_steps) / (max_step - warm_up_steps)
+    coefficient = 0.5 * (math.cos(math.pi * progress_percent) + 1)
+    return coefficient * (max_lr - min_lr) + min_lr
+
+
 if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
@@ -63,16 +75,33 @@ if __name__ == "__main__":
     device = "cuda"
     Path(CKPT_PATH).parent.mkdir(parents=True, exist_ok=True)
 
+    max_lr = 3e-4
+    min_lr = 3e-5
+    warm_up_steps = 100
+    max_step = 1000
+
     mallm = Mallm(cfg).to(device)
 
-    optimizer = torch.optim.AdamW(mallm.parameters(), lr=3e-4)
-    for step in range(1000):
+    optimizer = torch.optim.AdamW(mallm.parameters(), lr=max_lr)
+    for step in range(max_step):
         optimizer.zero_grad()
+        lr = get_lr(
+            step,
+            max_lr=max_lr,
+            min_lr=min_lr,
+            warm_up_steps=warm_up_steps,
+            max_step=max_step,
+        )
+
+        for group in optimizer.param_groups:
+            group["lr"] = lr
 
         x, y = get_batch(data, B=batch_size, T=cfg.block_size, device=device)
         with torch.autocast(device, dtype=torch.bfloat16):
             logits, loss = mallm(x, y)
         loss.backward()
+        grad_norm = nn.utils.clip_grad_norm_(mallm.parameters(), 1)
+
         optimizer.step()
 
         if step % 100 == 0:
@@ -92,7 +121,9 @@ if __name__ == "__main__":
                 block_size=cfg.block_size,
                 device=device,
             )
-            print(f"step: {step}, loss: {loss_train}, valid loss: {loss_val}")
+            print(
+                f"step: {step},lr {optimizer.param_groups[0]['lr']}, loss: {loss_train}, valid loss: {loss_val}, grad_norm: {grad_norm.item()}"
+            )
 
             save_ckpt(mallm, CKPT_PATH)
 
