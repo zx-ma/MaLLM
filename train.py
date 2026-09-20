@@ -113,6 +113,7 @@ if __name__ == "__main__":
         mallm.load_state_dict(latest_ckpt["model"])
         optimizer.load_state_dict(latest_ckpt["optimizer_state"])
 
+    mallm_compiled = torch.compile(mallm)
     for step in range(start_step, tr_cfg.max_step):
         optimizer.zero_grad()
         lr = get_lr(step, tr_cfg)
@@ -124,18 +125,20 @@ if __name__ == "__main__":
             data, B=tr_cfg.batch_size, T=cfg.block_size, device=tr_cfg.device
         )
         with torch.autocast(tr_cfg.device, dtype=torch.bfloat16):
-            logits, loss = mallm(x, y)
+            logits, loss = mallm_compiled(x, y)
         loss.backward()
-        grad_norm = nn.utils.clip_grad_norm_(mallm.parameters(), tr_cfg.grad_clip)
+        grad_norm = nn.utils.clip_grad_norm_(
+            mallm_compiled.parameters(), tr_cfg.grad_clip
+        )
 
         optimizer.step()
 
         if step % tr_cfg.eval_interval == 0:
             loss_train = evaluate_loss(
-                data, mallm, block_size=cfg.block_size, tr_cfg=tr_cfg
+                data, mallm_compiled, block_size=cfg.block_size, tr_cfg=tr_cfg
             )
             loss_val = evaluate_loss(
-                data_val, mallm, block_size=cfg.block_size, tr_cfg=tr_cfg
+                data_val, mallm_compiled, block_size=cfg.block_size, tr_cfg=tr_cfg
             )
             print(
                 f"step: {step},lr {optimizer.param_groups[0]['lr']}, loss: {loss_train}, valid loss: {loss_val}, grad_norm: {grad_norm.item()}"
