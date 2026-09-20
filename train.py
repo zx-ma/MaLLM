@@ -40,7 +40,8 @@ def evaluate_loss(data, model, loop_time, batch_size, block_size, device):
     losses = []
     for _ in range(loop_time):
         x, y = get_batch(data, B=batch_size, T=block_size, device=device)
-        _, loss = model(x, y)
+        with torch.autocast(device, dtype=torch.bfloat16):
+            _, loss = model(x, y)
         losses.append(loss.item())
 
     model.train()
@@ -69,7 +70,8 @@ if __name__ == "__main__":
         optimizer.zero_grad()
 
         x, y = get_batch(data, B=batch_size, T=cfg.block_size, device=device)
-        logits, loss = mallm(x, y)
+        with torch.autocast(device, dtype=torch.bfloat16):
+            logits, loss = mallm(x, y)
         loss.backward()
         optimizer.step()
 
