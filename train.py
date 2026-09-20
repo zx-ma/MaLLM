@@ -47,6 +47,11 @@ def evaluate_loss(data, model, loop_time, batch_size, block_size, device):
     return sum(losses) / len(losses)
 
 
+def save_ckpt(mallm, ckpt_path):
+    checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
+    torch.save(checkpoint, ckpt_path)
+
+
 if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
@@ -87,8 +92,6 @@ if __name__ == "__main__":
             )
             print(f"step: {step}, loss: {loss_train}, valid loss: {loss_val}")
 
-            checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
-            torch.save(checkpoint, CKPT_PATH)
+            save_ckpt(mallm, CKPT_PATH)
 
-    checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
-    torch.save(checkpoint, CKPT_PATH)
+    save_ckpt(mallm, CKPT_PATH)
