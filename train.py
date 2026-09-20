@@ -50,8 +50,14 @@ def evaluate_loss(data, model, loop_time, batch_size, block_size, device):
     return sum(losses) / len(losses)
 
 
-def save_ckpt(mallm, ckpt_path):
-    checkpoint = {"model": mallm.state_dict(), "config": asdict(mallm.config)}
+def save_ckpt(mallm, ckpt_path, step, lowest_loss, optimizer_state):
+    checkpoint = {
+        "model": mallm.state_dict(),
+        "config": asdict(mallm.config),
+        "step": step,
+        "lowest_loss": lowest_loss,
+        "optimizer_state": optimizer_state,
+    }
     torch.save(checkpoint, ckpt_path)
 
 
@@ -75,8 +81,8 @@ if __name__ == "__main__":
     batch_size = 32
     device = "cuda"
 
-    ckpt_path = Path(CKPT_DIR) / datetime.now().strftime("%m%d-%H%M")
-    ckpt_path.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(CKPT_DIR) / datetime.now().strftime("%m%d-%H%M")
+    run_dir.mkdir(parents=True, exist_ok=True)
 
     max_lr = 3e-4
     min_lr = 3e-5
@@ -129,9 +135,29 @@ if __name__ == "__main__":
             print(
                 f"step: {step},lr {optimizer.param_groups[0]['lr']}, loss: {loss_train}, valid loss: {loss_val}, grad_norm: {grad_norm.item()}"
             )
-            save_ckpt(mallm, ckpt_path / "last.pt")
+
             if loss_val < lowest_loss:
                 lowest_loss = loss_val
-                save_ckpt(mallm, ckpt_path / "best.pt")
+                save_ckpt(
+                    mallm,
+                    run_dir / "best.pt",
+                    step + 1,
+                    lowest_loss,
+                    optimizer.state_dict(),
+                )
 
-    save_ckpt(mallm, ckpt_path / "last.pt")
+            save_ckpt(
+                mallm,
+                run_dir / "last.pt",
+                step + 1,
+                lowest_loss,
+                optimizer.state_dict(),
+            )
+
+    save_ckpt(
+        mallm,
+        run_dir / "last.pt",
+        step=max_step,
+        lowest_loss=lowest_loss,
+        optimizer_state=optimizer.state_dict(),
+    )
