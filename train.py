@@ -76,25 +76,39 @@ if __name__ == "__main__":
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
-    cfg = MallmConfig(vocab_size=VOCAB_SIZE)
-
     batch_size = 32
     device = "cuda"
-
-    run_dir = Path(CKPT_DIR) / datetime.now().strftime("%m%d-%H%M")
-    run_dir.mkdir(parents=True, exist_ok=True)
 
     max_lr = 3e-4
     min_lr = 3e-5
     max_step = 1000
     warm_up_steps = 100
 
-    lowest_loss = float("inf")
+    resume_from_dir = None
+
+    if resume_from_dir:
+        run_dir = Path(resume_from_dir)
+
+        latest_ckpt = torch.load(run_dir / "last.pt")
+        cfg = MallmConfig(**latest_ckpt["config"])
+        lowest_loss = latest_ckpt["lowest_loss"]
+        start_step = latest_ckpt["step"]
+    else:
+        run_dir = Path(CKPT_DIR) / datetime.now().strftime("%m%d-%H%M")
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        cfg = MallmConfig(vocab_size=VOCAB_SIZE)
+        lowest_loss = float("inf")
+        start_step = 0
 
     mallm = Mallm(cfg).to(device)
-
     optimizer = torch.optim.AdamW(mallm.parameters(), lr=max_lr)
-    for step in range(max_step):
+
+    if resume_from_dir:
+        mallm.load_state_dict(latest_ckpt["model"])
+        optimizer.load_state_dict(latest_ckpt["optimizer_state"])
+
+    for step in range(start_step, max_step):
         optimizer.zero_grad()
         lr = get_lr(
             step,
