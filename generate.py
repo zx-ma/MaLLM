@@ -1,5 +1,3 @@
-from dataclasses import asdict
-
 import torch
 from tokenizers import Tokenizer
 
@@ -14,7 +12,6 @@ mallm = Mallm(cfg).to(device)
 mallm.load_state_dict(checkpoint["model"])
 mallm.eval()
 print(cfg)
-print(sum(p.numel() for p in mallm.parameters()))
 
 tok = Tokenizer.from_file(TOKENIZER_PATH)
 prompt = "Once upon a time"
@@ -23,7 +20,8 @@ index = torch.tensor([ids], device=device)
 
 
 max_ouput_token = 200
-
+temperature = 0.6
+topk = 50
 eot_id = tok.token_to_id("<|endoftext|>")
 
 
@@ -32,6 +30,11 @@ with torch.no_grad():
         logits, _ = mallm(index)
 
         logits = logits[:, -1, :]
+
+        logits = logits / temperature
+        values, _ = torch.topk(logits, topk)
+        logits[logits < values[:, -1:]] = float("-inf")
+
         probs = torch.softmax(logits, dim=-1)
         next_id = torch.multinomial(probs, num_samples=1)
         out = tok.decode([next_id.item()])
@@ -41,4 +44,4 @@ with torch.no_grad():
         if next_id.item() == eot_id:
             break
         else:
-            print(tok.decode([next_id.item()]), end="")
+            print(out, end="")
