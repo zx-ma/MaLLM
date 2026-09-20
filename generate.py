@@ -1,7 +1,7 @@
 import torch
 from tokenizers import Tokenizer
 
-from config import CKPT_PATH, TOKENIZER_PATH
+from config import TOKENIZER_PATH
 from model import Mallm, MallmConfig
 
 device = "cuda"

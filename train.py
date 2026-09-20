@@ -1,5 +1,6 @@
 import math
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from config import (
-    CKPT_PATH,
+    CKPT_DIR,
     TOKENIZER_PATH,
     TRAIN_BIN,
     TRAIN_TXT,
@@ -73,12 +74,16 @@ if __name__ == "__main__":
 
     batch_size = 32
     device = "cuda"
-    Path(CKPT_PATH).parent.mkdir(parents=True, exist_ok=True)
+
+    ckpt_path = Path(CKPT_DIR) / datetime.now().strftime("%m%d-%H%M")
+    ckpt_path.mkdir(parents=True, exist_ok=True)
 
     max_lr = 3e-4
     min_lr = 3e-5
-    warm_up_steps = 100
     max_step = 1000
+    warm_up_steps = 100
+
+    lowest_loss = float("inf")
 
     mallm = Mallm(cfg).to(device)
 
@@ -124,7 +129,9 @@ if __name__ == "__main__":
             print(
                 f"step: {step},lr {optimizer.param_groups[0]['lr']}, loss: {loss_train}, valid loss: {loss_val}, grad_norm: {grad_norm.item()}"
             )
+            save_ckpt(mallm, ckpt_path / "last.pt")
+            if loss_val < lowest_loss:
+                lowest_loss = loss_val
+                save_ckpt(mallm, ckpt_path / "best.pt")
 
-            save_ckpt(mallm, CKPT_PATH)
-
-    save_ckpt(mallm, CKPT_PATH)
+    save_ckpt(mallm, ckpt_path / "last.pt")
