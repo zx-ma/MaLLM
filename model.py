@@ -42,14 +42,13 @@ class Attention(nn.Module):
         k = k.view(B, T, self.nh, -1).transpose(1, 2)
         v = v.view(B, T, self.nh, -1).transpose(1, 2)
 
-        scores = q @ k.transpose(-1, -2) / (q.size(-1) ** 0.5)
-        mask = torch.tril(torch.ones(T, T, device=x.device))
+        # scores = q @ k.transpose(-1, -2) / (q.size(-1) ** 0.5)
+        # mask = torch.tril(torch.ones(T, T, device=x.device))
+        # scores = scores.masked_fill(mask == 0, float("-inf"))
+        # alpha = torch.softmax(scores, dim=-1)
+        # out = alpha @ v
+        out = F.scaled_dot_product_attention(query=q, key=k, value=v, is_causal=True)
 
-        scores = scores.masked_fill(mask == 0, float("-inf"))
-
-        alpha = torch.softmax(scores, dim=-1)
-
-        out = alpha @ v
         out = out.transpose(1, 2).reshape(B, T, -1)
 
         return self.fc(out)
