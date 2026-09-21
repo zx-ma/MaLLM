@@ -58,9 +58,9 @@ class Block(nn.Module):
     def __init__(self, d, n_head):
         super().__init__()
         self.attn = Attention(d, n_head)
-        self.ln1 = nn.LayerNorm(d)
+        self.ln1 = nn.RMSNorm(d)
         self.mlp = MLP(d)
-        self.ln2 = nn.LayerNorm(d)
+        self.ln2 = nn.RMSNorm(d)
 
     def forward(self, x):
         x = x + self.attn(self.ln1(x))
@@ -71,10 +71,10 @@ class Block(nn.Module):
 @dataclass
 class MallmConfig:
     vocab_size: int
-    d: int = 384
+    d: int = 640
     block_size: int = 256
-    n_head: int = 6
-    n_layer: int = 6
+    n_head: int = 10
+    n_layer: int = 16
 
 
 class Mallm(nn.Module):
@@ -89,7 +89,7 @@ class Mallm(nn.Module):
             [Block(config.d, config.n_head) for _ in range(config.n_layer)]
         )
 
-        self.ln_final = nn.LayerNorm(config.d)
+        self.ln_final = nn.RMSNorm(config.d)
 
         self.language_model_head = nn.Linear(config.d, config.vocab_size, bias=False)
 

@@ -36,13 +36,18 @@ def get_batch(data, B, T, device):
 class TrainConfig:
     batch_size: int = 32
     device: str = "cuda"
-    max_lr: float = 3e-4
-    min_lr: float = 3e-5
+    max_lr: float = 5e-4
+    min_lr: float = 5e-5
+    # max_step: int = 199_000
+    # warm_up_steps: int = 2000
+    # eval_interval: int = 1000
     max_step: int = 1000
     warm_up_steps: int = 100
     eval_interval: int = 100
     eval_batches_num: int = 20
     grad_clip: float = 1.0
+    betas: tuple[float, float] = (0.9, 0.95)
+    weight_decay: float = 0.1
 
 
 @torch.no_grad()
@@ -84,6 +89,7 @@ def get_lr(step, tr_cfg: TrainConfig):
 
 
 if __name__ == "__main__":
+    torch.manual_seed(2026)
     data = np.memmap(TRAIN_BIN, dtype=np.uint16, mode="r")
     data_val = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
@@ -107,7 +113,18 @@ if __name__ == "__main__":
         start_step = 0
 
     mallm = Mallm(cfg).to(tr_cfg.device)
-    optimizer = torch.optim.AdamW(mallm.parameters(), lr=tr_cfg.max_lr)
+
+    decay_param = [param for param in list(mallm.parameters()) if param.dim() >= 2]
+    none_decay_param = [param for param in list(mallm.parameters()) if param.dim() < 2]
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": decay_param, "weight_decay": tr_cfg.weight_decay},
+            {"params": none_decay_param, "weight_decay": 0.0},
+        ],
+        lr=tr_cfg.max_lr,
+        betas=tr_cfg.betas,
+        fused=(tr_cfg.device == "cuda"),
+    )
 
     if resume_from_dir:
         mallm.load_state_dict(latest_ckpt["model"])
