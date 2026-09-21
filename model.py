@@ -5,6 +5,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def rope_cos_sin(T, head_dim, device):
+    expon = torch.arange(0, head_dim, 2, dtype=torch.float, device=device) / head_dim
+
+    inv_freq = 1 / (10000**expon)
+    positions = torch.arange(T, dtype=torch.float, device=device)
+    angles = torch.outer(positions, inv_freq)
+    cos = angles.cos()
+    sin = angles.sin()
+    return cos, sin
+
+
+def apply_rope(x, cos, sin):
+    head_dim = x.size(-1)
+    x1 = x[..., : head_dim // 2]
+    x2 = x[..., head_dim // 2 :]
+
+    x_rotated = torch.cat(
+        [x1 * cos - x2 * sin, x1 * sin + x2 * cos],
+        dim=-1,
+    )
+
+    return x_rotated
+
+
 class MLP(nn.Module):
     def __init__(self, d):
         super().__init__()
@@ -47,6 +71,11 @@ class Attention(nn.Module):
         # scores = scores.masked_fill(mask == 0, float("-inf"))
         # alpha = torch.softmax(scores, dim=-1)
         # out = alpha @ v
+
+        the_cos, the_sin = rope_cos_sin(T, q.size(-1), x.device)
+        q = apply_rope(q, the_cos, the_sin)
+        k = apply_rope(k, the_cos, the_sin)
+
         out = F.scaled_dot_product_attention(query=q, key=k, value=v, is_causal=True)
 
         out = out.transpose(1, 2).reshape(B, T, -1)
@@ -83,7 +112,7 @@ class Mallm(nn.Module):
         self.config = config
         self.vocab_size = config.vocab_size
         self.tok_emb = nn.Embedding(config.vocab_size, config.d)
-        self.pos_emb = nn.Embedding(config.block_size, config.d)
+        # self.pos_emb = nn.Embedding(config.block_size, config.d)
 
         self.blocks = nn.ModuleList(
             [Block(config.d, config.n_head) for _ in range(config.n_layer)]
@@ -97,11 +126,11 @@ class Mallm(nn.Module):
 
     def forward(self, index, target=None):
         B, T = index.size()
-        tok = self.tok_emb(index)
+        x = self.tok_emb(index)
 
-        positions = torch.arange(T, device=index.device)
-        pos = self.pos_emb(positions)
-        x = tok + pos
+        # positions = torch.arange(T, device=index.device)
+        # pos = self.pos_emb(positions)
+        # x = tok + pos
 
         for block in self.blocks:
             x = block(x)
