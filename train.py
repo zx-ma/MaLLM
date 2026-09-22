@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 
 from config import (
     CKPT_DIR,
@@ -130,6 +131,10 @@ if __name__ == "__main__":
         mallm.load_state_dict(latest_ckpt["model"])
         optimizer.load_state_dict(latest_ckpt["optimizer_state"])
 
+    wandb.init(
+        project="mallm", name=run_dir.name, config={**asdict(tr_cfg), **asdict(cfg)}
+    )
+
     mallm_compiled = torch.compile(mallm)
     for step in range(start_step, tr_cfg.max_step):
         optimizer.zero_grad()
@@ -159,6 +164,15 @@ if __name__ == "__main__":
             )
             print(
                 f"step: {step},lr {optimizer.param_groups[0]['lr']}, loss: {loss_train}, valid loss: {loss_val}, grad_norm: {grad_norm.item()}"
+            )
+            wandb.log(
+                {
+                    "loss/train": loss_train,
+                    "loss/val": loss_val,
+                    "lr": lr,
+                    "grad_norm": grad_norm.item(),
+                },
+                step=step,
             )
 
             if loss_val < lowest_loss:

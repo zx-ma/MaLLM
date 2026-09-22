@@ -5,7 +5,7 @@ from config import TOKENIZER_PATH
 from model import Mallm, MallmConfig
 
 device = "cuda"
-checkpoint = torch.load("checkpoints/mallm-12l-8h.pt", map_location=device)
+checkpoint = torch.load("checkpoints/best.pt", map_location=device)
 cfg = MallmConfig(**checkpoint["config"])
 mallm = Mallm(cfg).to(device)
 
@@ -19,14 +19,14 @@ ids = tok.encode(prompt).ids
 index = torch.tensor([ids], device=device)
 
 
-max_ouput_token = 200
-temperature = 0.6
+max_output_tokens = 600
+temperature = 0.9
 topk = 50
 eot_id = tok.token_to_id("<|endoftext|>")
 
-
+print(prompt, end="")
 with torch.no_grad():
-    for _ in range(max_ouput_token):
+    for _ in range(max_output_tokens):
         logits, _ = mallm(index)
 
         logits = logits[:, -1, :]
