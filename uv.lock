@@ -372,6 +372,7 @@ name = "mallm"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "numpy" },
     { name = "tokenizers" },
     { name = "torch" },
@@ -381,6 +382,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "huggingface-hub", specifier = ">=1.31.0" },
     { name = "numpy", specifier = ">=2.5.3" },
     { name = "tokenizers", specifier = ">=0.23.2" },
     { name = "torch", specifier = ">=2.11.0", index = "https://download.pytorch.org/whl/cu128" },
