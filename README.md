@@ -38,9 +38,9 @@ config.py             paths, vocab size, special tokens
 bpe.py                BPE from scratch (reference, unused)
 train_tokenizer.py    trains tokenizer-8k.json
 check_tokenizer.py    tokenizer checks
-prepare.py            txt → uint16 .bin
+prepare_pretrain.py   txt → uint16 .bin
 model.py              model
-train.py              pretraining
+pretrain.py           pretraining
 generate.py           sampling
 ```
 
@@ -49,17 +49,16 @@ generate.py           sampling
 ```bash
 uv sync
 
-mkdir -p data/raw && cd data/raw
-wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-train.txt
-wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt
-cd ../..
+uv run hf download roneneldan/TinyStories \
+    TinyStoriesV2-GPT4-train.txt TinyStoriesV2-GPT4-valid.txt \
+    --repo-type dataset --local-dir data/raw
 
 uv run wandb login
 uv run python train_tokenizer.py
-uv run python prepare.py
-uv run python train.py
+uv run python prepare_pretrain.py
+uv run python pretrain.py
 uv run python generate.py
 ```
 
-`MallmConfig` in `model.py`, `TrainConfig` in `train.py`.
+`MallmConfig` in `model.py`, `TrainConfig` in `pretrain.py`.
 
