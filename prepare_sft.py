@@ -1,9 +1,6 @@
 import random
 import re
-from pathlib import Path
-from pprint import pprint
 
-import numpy as np
 from datasets import Dataset, Features, List, Value
 from tokenizers import Tokenizer
 
@@ -96,6 +93,7 @@ def sft_data_generator(text_path, pattern, tok: Tokenizer):
 
 
 if __name__ == "__main__":
+    random.seed(2026)
     pattern = re.compile(
         r"^(Features|Summary|Words|Random sentence|Story):", flags=re.M
     )

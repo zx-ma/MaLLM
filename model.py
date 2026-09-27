@@ -141,7 +141,7 @@ class Mallm(nn.Module):
         loss = None
         if target is not None:
             loss = F.cross_entropy(
-                logits.reshape(-1, self.vocab_size), target.reshape(-1)
+                logits.reshape(-1, self.vocab_size), target.reshape(-1), ignore_index=-1
             )
 
         return logits, loss
