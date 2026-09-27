@@ -33,7 +33,7 @@ def generate(model, tok, prompt_text, max_new_tokens, temperature, topk, device)
 
 if __name__ == "__main__":
     device = "cuda"
-    checkpoint = torch.load("checkpoints/best.pt", map_location=device)
+    checkpoint = torch.load("checkpoints/best_sft.pt", map_location=device)
     tok = Tokenizer.from_file(TOKENIZER_PATH)
     cfg = MallmConfig(**checkpoint["config"])
     mallm = Mallm(cfg).to(device)
@@ -42,7 +42,13 @@ if __name__ == "__main__":
     mallm.eval()
     # print(cfg)
 
-    prompt = "Once upon a time"
+    # prompt = "Once upon a time"
+    prompt = (
+        "<|user|>\n"
+        "Summary: bob goes into the forest and finds a hidden lake.\n"
+        "Words: brave, lake, map\n"
+        "<|assistant|>\n"
+    )
     ids = tok.encode(prompt).ids
     index = torch.tensor([ids], device=device)
 
@@ -56,4 +62,5 @@ if __name__ == "__main__":
         device=device,
     )
 
-    print(prompt + text)
+    # print(prompt + text)
+    print(text)
