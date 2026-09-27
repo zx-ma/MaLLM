@@ -6,13 +6,14 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
-import wandb
 from datasets import Dataset, load_from_disk
 from tokenizers import Tokenizer
 
+import wandb
 from config import (
     CKPT_DIR,
     PAD,
+    SFT_MAX_LEN,
     SFT_TRAIN_DIR,
     SFT_VAL_DIR,
     TOKENIZER_PATH,
@@ -43,7 +44,7 @@ def get_batch(ds: Dataset, B, pad_id, device):
 
 @dataclass
 class SftConfig:
-    batch_size: int = 16
+    batch_size: int = 12
     device: str = "cuda"
     max_lr: float = 1e-4
     min_lr: float = 1e-5
@@ -108,6 +109,7 @@ if __name__ == "__main__":
 
     pretrain_best_ckpt = torch.load("checkpoints/best.pt", map_location=sft_cfg.device)
     cfg = MallmConfig(**pretrain_best_ckpt["config"])
+    cfg.block_size = SFT_MAX_LEN
     mallm = Mallm(cfg).to(sft_cfg.device)
     mallm.load_state_dict(pretrain_best_ckpt["model"])
 
