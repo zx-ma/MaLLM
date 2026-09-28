@@ -2,6 +2,8 @@
 
 84M-param LLM from scratch on one RTX 5070 Laptop (8 GB).
 
+Weights: [mallm-base](https://huggingface.co/zhexMa/mallm-base), [mallm-instruct](https://huggingface.co/zhexMa/mallm-instruct)
+
 - **Model**: 16 layers, d 640, 10 heads, RoPE, RMSNorm, SDPA, GELU MLP, tied embeddings, 8k byte-level BPE
 - **Pretrain**: TinyStories V2, 1.63 B tokens (3 epochs), 9.5 h, val loss 1.09
 - **SFT**: TinyStories-Instruct, 160 k samples, loss on story only, 19 min, val loss 1.30 to ~1.03
